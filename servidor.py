@@ -1,63 +1,62 @@
+from email import message
 import socket
 import _thread
 import traceback
 
 
 serverPort = 12000
-jogadores = []
+conexoes = []
+users = {}
 
-
-
-class Jogador:
-    def __init__(self):
-        self.vida = 20
-        self.ataque = 0
-        self.defesa  = 0
-
-    def setVida(self, vida):
-        self.vida = vida
-
-    def getVida(self):
-        return self.vida
-
-
-    def setAtaque(self, ataque):
-        self.ataque = ataque
-
-    def getAtaque(self):
-        return self.ataque
-
-    
-    def setDefesa(self, defesa):
-        self.defesa = defesa
-
-    def getDefesa(self):
-        return self.defesa
 
 
 def threaded(socketConexao):
-    data = socketConexao.recv(1024)
-    data = data.decode()
-    data = data[::-1]
-    print(data)
-    data = data.encode('ascii')
-    socketConexao.send(data)
-    socketConexao.close()
+    while True:
+        try:
+            data = socketConexao.recv(3096)
+            if not data:
+                conexoes.remove(socketConexao)
+                socketConexao.close()
+                break
+
+            if users[socketConexao] == "userNameGenerico":
+                users[socketConexao] = data.decode('ascii')
+                mensagemInicial = "Usuarios conectados:"
+                for conexao in conexoes:
+                    usuario = users[conexao]
+                    mensagemEntrou = users[socketConexao] + ' entrou no chat'
+                    if  conexao != socketConexao:
+                        conexao.send(mensagemEntrou.encode('ascii'))
+                    mensagemInicial = mensagemInicial + " " + usuario + ", "
+                mensagemInicial = mensagemInicial.encode('ascii')
+                socketConexao.send(mensagemInicial)
+
+            else:
+                remetente = users[socketConexao]
+                mensagem = remetente + ': ' + data.decode('utf-8')
+                mensagemByte = mensagem.encode('utf-8')
+                for conexao in conexoes:
+                    if conexao != socketConexao:
+                        conexao.send(mensagemByte)
+        
+        except Exception:
+            conexoes.remove(socketConexao)
+            socketConexao.close()
+            break
 
 
 if __name__ == '__main__':
     try:
         serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         serverSocket.bind(('',serverPort))
-        serverSocket.listen(1)
-        print('Já pode mandar')
+        serverSocket.listen()
+        print('O chat está aberto')
         while True:
-            if(len(jogadores) == 0):
-                print("Esperando 2 jogadores")
-            if(len(jogadores) == 0):
-                print("Esperando 2 jogadores")
             socketConexao, addr = serverSocket.accept()
+            conexoes.append(socketConexao)
+            users[socketConexao] = "userNameGenerico"
             _thread.start_new_thread(threaded, (socketConexao,))
+
 
     except Exception:
         print(traceback.format_exc())
