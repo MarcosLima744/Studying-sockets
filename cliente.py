@@ -13,6 +13,7 @@ except Exception:
 
 
 def sendMessage(Socket):
+    print("Digite seu nome de usuário")
     while True:
         data = input()
         data = data.encode('utf-8')
@@ -31,7 +32,6 @@ def recMessage(Socket):
 
         except Exception:
             print(traceback.format_exc())
-
 
 
 _thread.start_new_thread(sendMessage, (clientSocket,))
